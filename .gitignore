@@ -1,0 +1,11 @@
+/target
+
+# The original build brief. Kept locally, not published.
+/plan.md
+
+# Reports and caches written by test runs in the working tree.
+/photofold-report.json
+/photofold-report.csv
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
