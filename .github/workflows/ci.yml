@@ -8,10 +8,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: -D warnings
 
 jobs:
-  # Formatting is the same on every platform, so it only needs to run once.
+  # Formatting is identical on every platform, so it only needs to run once.
   format:
     name: Format
     runs-on: ubuntu-latest
@@ -23,24 +22,31 @@ jobs:
       - run: cargo fmt --all --check
 
   test:
-    name: ${{ matrix.os }} / ${{ matrix.features }}
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        # The build without HEIC support has to keep working: it is what the
-        # released binaries use, and it must pass the same tests.
-        features: ["default", "no-default-features"]
+        include:
+          # The portable build links no system libraries. It is what the
+          # released binaries use, so it has to pass everywhere.
+          - name: Linux, portable build
+            os: ubuntu-latest
+            flags: --no-default-features
+          - name: macOS, portable build
+            os: macos-latest
+            flags: --no-default-features
+          # HEIC support needs libheif 1.23 or newer. Homebrew has it; no
+          # current Debian or Ubuntu release does, so this job is macOS only.
+          - name: macOS, with HEIC
+            os: macos-latest
+            flags: ""
+            libheif: true
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install libheif (Linux)
-        if: matrix.os == 'ubuntu-latest' && matrix.features == 'default'
-        run: sudo apt-get update && sudo apt-get install -y libheif-dev pkg-config
-
-      - name: Install libheif (macOS)
-        if: matrix.os == 'macos-latest' && matrix.features == 'default'
+      - name: Install libheif
+        if: matrix.libheif
         run: brew install libheif pkg-config
 
       - uses: dtolnay/rust-toolchain@stable
@@ -48,31 +54,19 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.features }}
+          key: ${{ matrix.name }}
 
-      - name: Clippy
-        run: |
-          if [ "${{ matrix.features }}" = "default" ]; then
-            cargo clippy --all-targets -- -D warnings
-          else
-            cargo clippy --all-targets --no-default-features -- -D warnings
-          fi
+      - run: cargo clippy --all-targets ${{ matrix.flags }} -- -D warnings
+      - run: cargo test --all-targets ${{ matrix.flags }}
 
-      - name: Test
-        run: |
-          if [ "${{ matrix.features }}" = "default" ]; then
-            cargo test --all-targets
-          else
-            cargo test --all-targets --no-default-features
-          fi
-
-  # Proves the rust-version in Cargo.toml is true.
+  # Proves the rust-version in Cargo.toml is true, over the whole code including
+  # the HEIC backend, so it runs where libheif is available.
   minimum-rust-version:
     name: Minimum supported Rust
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
-      - run: sudo apt-get update && sudo apt-get install -y libheif-dev pkg-config
+      - run: brew install libheif pkg-config
       - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --all-targets

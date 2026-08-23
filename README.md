@@ -65,14 +65,14 @@ Supported video formats: `.mov` `.mp4` `.m4v`.
 
 ### From crates.io, with HEIC support
 
-This is the recommended way. HEIC support needs libheif, which brings its own HEVC decoder:
+This is the recommended way on macOS:
 
 ```bash
-brew install libheif pkg-config        # macOS
-sudo apt install libheif-dev pkg-config # Debian and Ubuntu
-
+brew install libheif pkg-config
 cargo install photofold
 ```
+
+**HEIC support needs libheif 1.23 or newer.** Homebrew has it. No current Debian or Ubuntu release does — Ubuntu 24.04 ships 1.17.6, which is too old. On Linux, either build libheif from source first, or use the portable build below. HEIC files still work in the portable build; they are only left out of visual matching.
 
 ### Prebuilt binary
 
@@ -93,9 +93,12 @@ On Apple Silicon, `/usr/local/bin` is not on the default `PATH`, which is why `~
 ```bash
 git clone https://github.com/dansku/photofold
 cd photofold
-cargo build --release
+cargo build --release                      # needs libheif 1.23+
+cargo build --release --no-default-features # no system libraries at all
 cp target/release/photofold ~/.local/bin/
 ```
+
+Rust 1.88 or newer is required.
 
 ### Windows
 
@@ -500,6 +503,7 @@ Known, and deliberate:
 - **The output folder is flat.** There is no `--organize year/month` yet, though the code is arranged to make adding it small.
 - **There is no `--aggressive` mode.** Matches below the merge threshold are reported, never acted on.
 - **Windows is untested.**
+- **HEIC support is effectively macOS-only for now.** It needs libheif 1.23 or newer, which Homebrew provides and current Linux distributions do not yet package. Everything else works identically on Linux.
 - **Bursts are kept.** Consecutive shots of the same scene are reported as similar and both kept. That is the intended behaviour, not an oversight.
 - **A Live Photo movie is never deduplicated against a standalone video.** Paired movies are excluded from duplicate detection so they cannot be separated from their still. If the same clip also exists on its own elsewhere, both copies are kept. This errs towards keeping too much, never towards losing anything.
 

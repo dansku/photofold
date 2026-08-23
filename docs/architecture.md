@@ -84,8 +84,10 @@ Thread count comes from `std::thread::available_parallelism`, so `num_cpus` is n
 
 ```toml
 default = ["heic"]
-heic    = ["dep:libheif-rs"]   # needs: brew install libheif pkg-config
+heic    = ["dep:libheif-rs"]   # needs libheif 1.23+ and pkg-config
 ```
+
+`libheif-rs` 3.0 requires libheif 1.23 or newer. Homebrew ships 1.23.1; Ubuntu 24.04 ships 1.17.6, so the feature cannot be built there from distribution packages. CI therefore tests the HEIC build on macOS and the portable build on both platforms, and the released binaries are portable builds.
 
 Building without `heic` still scans, hashes, reads EXIF from, and copies HEIC files. They simply get no visual fingerprint, so they are never visually merged. That is the conservative failure mode, and the whole test suite passes in both configurations.
 

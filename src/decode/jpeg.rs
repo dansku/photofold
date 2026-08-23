@@ -50,7 +50,8 @@ fn to_image(
         PixelFormat::L16 => {
             // Keep the high byte of each sample; the fingerprint does not need
             // more precision than that.
-            let eight_bit: Vec<u8> = pixels.chunks_exact(2).map(|pair| pair[1]).collect();
+            let (samples, _) = pixels.as_chunks::<2>();
+            let eight_bit: Vec<u8> = samples.iter().map(|sample| sample[1]).collect();
             GrayImage::from_raw(width, height, eight_bit)
                 .map(DynamicImage::ImageLuma8)
                 .ok_or_else(|| "could not build a grey image from the JPEG".to_string())
@@ -69,8 +70,9 @@ fn to_image(
             }
             // Adobe CMYK JPEGs store inverted values. This is a rough
             // conversion, which is all a perceptual hash needs.
-            let rgb: Vec<u8> = pixels
-                .chunks_exact(4)
+            let (samples, _) = pixels.as_chunks::<4>();
+            let rgb: Vec<u8> = samples
+                .iter()
                 .flat_map(|p| {
                     let k = u32::from(p[3]);
                     [
